@@ -9,7 +9,7 @@ pygame.init()
 pygame.mixer.init()
 WIDTH, HEIGHT = 1280, 720
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Youngwonks Hackathon: Social Good & Charity")
+pygame.display.set_caption("Youngwonks Hackathon: Cleanup Collective")
 
 # Variables
 CWD = os.getcwd()
