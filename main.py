@@ -12,7 +12,6 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Youngwonks Hackathon: Social Good & Charity")
 
 # Variables
-
 CWD = os.getcwd()
 ASSETS = os.path.join(CWD, 'assets')
 SPRITES = os.path.join(ASSETS, 'sprites')
@@ -52,11 +51,13 @@ for item in os.listdir(TRASH):
     img = pygame.transform.scale(pygame.image.load(os.path.join(TRASH, item)).convert_alpha(), (50, 50))
     TRASHLIST.append(img)
 
-pygame.display.set_icon(BEGGAR_LOADED)
+pygame.display.set_icon(pygame.image.load(os.path.join(SPRITES, 'trash', 'banana_peel.png')).convert_alpha())
 
 running = True
 fps = 60
 fps_clock = pygame.time.Clock()
+total_time = 60
+time_remaining = total_time
 
 player_inventory = {
     'Trash': 0,
@@ -74,7 +75,6 @@ BLUE = (0, 0, 255)
 WHITE = (255, 255, 255)
 YELLOW = (255, 255,0)
 BLACK = (0, 0, 0)
-colors = [RED, GREEN, BLUE, WHITE, YELLOW]
 
 class Character():
     def __init__(self, x, y, image):
@@ -96,7 +96,6 @@ class Boy():
         self.current = BOY_IDLING
         self.frame = 1
         self.direction = 'e'
-        
     
     def draw(self):
         screen.blit(self.current, (self.x, self.y))
@@ -166,6 +165,7 @@ def draw_sprites():
     show_text(f'Money: {player_inventory["Money"]}', 10, 10, WHITE, 32)
     show_text(f'Trash: {player_inventory["Trash"]}', 10, 40, WHITE, 32)
     show_text(f'Karma: {player_inventory["Karma"]}', 10, 70, WHITE, 32)
+    show_text(f'Time Remaining: {time_remaining}', 10, 100, WHITE, 32)
     donate_button.draw()
 
     pygame.display.update()
@@ -181,7 +181,9 @@ def quit():
 
 player = Boy(625, 350)
 trash_bin = Character(25, 625, TRASH_BIN_LOADED)
-donate_button = Button('Donate All to Charity', WHITE, RED, 16, donate, 10, 100)
+donate_button = Button('Donate All to Charity', WHITE, RED, 16, donate, 10, 130)
+
+start_time = time.perf_counter()
 
 while running == True:
     fps_clock.tick(fps)
@@ -209,6 +211,7 @@ while running == True:
                 for thing in beggars:
                     if player.x in range(thing.x - BOY_DIMENSIONS[0], thing.x + 75) and player.y in range(thing.y - BOY_DIMENSIONS[1], thing.y + 75):
                         if player_inventory['Money'] > 4:
+                            time_remaining += player_inventory['Money']//2 * 4
                             player_inventory['Money'] //= 2
                             player_inventory['Karma'] += 5
                             beggars.remove(thing)
@@ -219,10 +222,13 @@ while running == True:
                 
                 for thing in trash:
                     if player.x in range(thing.x - BOY_DIMENSIONS[0], thing.x + 75) and player.y in range(thing.y - BOY_DIMENSIONS[1], thing.y + 75):
-                        trash.remove(thing)
-                        player_inventory['Trash'] += 1
-                        player_inventory['Karma'] += 1
-                        pygame.mixer.Sound.play(PICKUP)
+                        if player_inventory['Trash'] < 5:
+                            trash.remove(thing)
+                            player_inventory['Trash'] += 1
+                            player_inventory['Karma'] += 1
+                            pygame.mixer.Sound.play(PICKUP)
+                        else:
+                            pygame.mixer.Sound.play(FAIL)
                 
                 if player.x in range(trash_bin.x - BOY_DIMENSIONS[0], trash_bin.x + 75) and player.y in range(trash_bin.y - BOY_DIMENSIONS[1], trash_bin.y + 75):
                     if player_inventory['Trash'] > 0:
@@ -240,12 +246,29 @@ while running == True:
         elif event.type == MOUSEBUTTONDOWN:
             if donate_button.text_rect.collidepoint(event.pos):
                 player_inventory['Karma'] += player_inventory['Money']
+                time_remaining += player_inventory['Money'] * 3
                 player_inventory['Money'] = 0
                 pygame.mixer.Sound.play(BUTTON_PRESS)
 
     
     if randomizer(0, 2000):
-        beggars.append(Character(random.randint(0, WIDTH-75), random.randint(0, HEIGHT-75), BEGGAR_LOADED))
+        beggars.append(Character(random.randint(0, WIDTH - 75), random.randint(0, HEIGHT - 75), BEGGAR_LOADED))
     
     if randomizer(0, 250):
-        trash.append(Character(random.randint(0, WIDTH-50), random.randint(0, HEIGHT-50), random.choice(TRASHLIST)))
+        trash.append(Character(random.randint(0, WIDTH - 50), random.randint(0, HEIGHT - 50), random.choice(TRASHLIST)))
+    
+    if time.perf_counter() - start_time > 1:
+        time_remaining -= 1
+        start_time = time.perf_counter()
+    
+    if time_remaining < 0 or len(beggars) > 4 or len(trash) > 9:
+        running = False
+
+screen.blit(BACKGROUND_LOADED, (0, 0))
+show_text(f'Final karma after {total_time} seconds: {player_inventory["Karma"]}', 300, 350, BLUE, 62)
+
+while True:
+    pygame.display.update()
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            quit()
